@@ -1,14 +1,19 @@
 import goblinSrc from "../img/goblin.png";
 
+// ─── Constants ─────────────────────────────────────────────────────────────
+
+const GRID_SIZE = 16;
+const GOBLIN_MOVE_INTERVAL = 1000;
+
 // ─── Task 1: Element Movement ───────────────────────────────────────────────
 
 export function initGame(container) {
   const cells = [];
 
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < GRID_SIZE; i++) {
     const cell = document.createElement("div");
     cell.className = "game-cell";
-    container.appendChild(cell);
+    container.append(cell);
     cells.push(cell);
   }
 
@@ -17,19 +22,21 @@ export function initGame(container) {
   goblin.alt = "goblin";
   goblin.className = "goblin";
 
-  let currentIndex = Math.floor(Math.random() * 16);
-  cells[currentIndex].appendChild(goblin);
+  let currentIndex = Math.floor(Math.random() * GRID_SIZE);
+  cells[currentIndex].append(goblin);
 
-  setInterval(() => {
+  const gameInterval = setInterval(() => {
     let newIndex;
     do {
-      newIndex = Math.floor(Math.random() * 16);
+      newIndex = Math.floor(Math.random() * GRID_SIZE);
     } while (newIndex === currentIndex);
 
-    // appendChild removes goblin from current parent automatically — no removeChild needed
-    cells[newIndex].appendChild(goblin);
+    // append removes goblin from current parent automatically — no removeChild needed
+    cells[newIndex].append(goblin);
     currentIndex = newIndex;
-  }, 1000);
+  }, GOBLIN_MOVE_INTERVAL);
+
+  return () => clearInterval(gameInterval);
 }
 
 // ─── Movie data ───────────────────────────────────────────────────────────────
@@ -53,56 +60,22 @@ const sortCycle = [
   { field: "year", direction: "desc" },
 ];
 
-// ─── Task 2: Sorting via data-* attributes ───────────────────────────────────
+// ─── Common Sorting System Factory ─────────────────────────────────────────
 
-function renderTableFromDataAttrs(tbody, sortedRows) {
-  sortedRows.forEach((row) => tbody.appendChild(row));
-}
-
-export function initDataAttrSorting(table, sortInfoEl) {
-  const tbody = table.querySelector("tbody");
-  const headers = table.querySelectorAll("thead th");
-
-  // Initial render: create rows with data-* attributes
-  movies.forEach((movie) => {
-    const tr = document.createElement("tr");
-    tr.dataset.id = movie.id;
-    tr.dataset.title = movie.title;
-    tr.dataset.imdb = movie.imdb;
-    tr.dataset.year = movie.year;
-
-    tr.innerHTML = `
-      <td>${movie.id}</td>
-      <td>${movie.title}</td>
-      <td>${movie.imdb.toFixed(2)}</td>
-      <td>${movie.year}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-
+function createSortingSystem(
+  tbody,
+  headers,
+  sortInfoEl,
+  getSortedData,
+  renderFn,
+) {
   let cycleIndex = 0;
 
   function applySort() {
     const { field, direction } = sortCycle[cycleIndex];
+    const sortedData = getSortedData(field, direction);
 
-    const rows = Array.from(tbody.querySelectorAll("tr"));
-
-    rows.sort((a, b) => {
-      let valA = a.dataset[field];
-      let valB = b.dataset[field];
-
-      // Numeric fields
-      if (field === "id" || field === "imdb" || field === "year") {
-        valA = parseFloat(valA);
-        valB = parseFloat(valB);
-      }
-
-      if (valA < valB) return direction === "asc" ? -1 : 1;
-      if (valA > valB) return direction === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    renderTableFromDataAttrs(tbody, rows);
+    renderFn(tbody, sortedData);
 
     // Update header indicators
     headers.forEach((th) => {
@@ -118,7 +91,74 @@ export function initDataAttrSorting(table, sortInfoEl) {
   }
 
   applySort();
-  setInterval(applySort, 2000);
+  const sortInterval = setInterval(applySort, 2000);
+
+  return () => clearInterval(sortInterval);
+}
+
+// ─── Task 2: Sorting via data-* attributes ───────────────────────────────────
+
+function renderTableFromDataAttrs(tbody, sortedRows) {
+  sortedRows.forEach((row) => tbody.append(row));
+}
+
+export function initDataAttrSorting(table, sortInfoEl) {
+  const tbody = table.querySelector("tbody");
+  const headers = table.querySelectorAll("thead th");
+
+  // Initial render: create rows with data-* attributes
+  movies.forEach((movie) => {
+    const tr = document.createElement("tr");
+    tr.dataset.id = movie.id;
+    tr.dataset.title = movie.title;
+    tr.dataset.imdb = movie.imdb;
+    tr.dataset.year = movie.year;
+
+    const td1 = document.createElement("td");
+    td1.textContent = movie.id;
+    tr.append(td1);
+
+    const td2 = document.createElement("td");
+    td2.textContent = movie.title;
+    tr.append(td2);
+
+    const td3 = document.createElement("td");
+    td3.textContent = movie.imdb.toFixed(2);
+    tr.append(td3);
+
+    const td4 = document.createElement("td");
+    td4.textContent = movie.year;
+    tr.append(td4);
+
+    tbody.append(tr);
+  });
+
+  const getSortedData = (field, direction) => {
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+
+    return rows.sort((a, b) => {
+      let valA = a.dataset[field];
+      let valB = b.dataset[field];
+
+      // Numeric fields
+      if (field === "id" || field === "imdb" || field === "year") {
+        valA = parseFloat(valA);
+        valB = parseFloat(valB);
+      }
+
+      if (valA < valB) return direction === "asc" ? -1 : 1;
+      if (valA > valB) return direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  };
+
+  return createSortingSystem(
+    tbody,
+    headers,
+    sortInfoEl,
+    getSortedData,
+    renderTableFromDataAttrs,
+  );
 }
 
 // ─── Task 3: Sorting via in-memory array ─────────────────────────────────────
@@ -127,13 +167,24 @@ function renderTableFromMemory(tbody, sortedMovies) {
   tbody.innerHTML = "";
   sortedMovies.forEach((movie) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${movie.id}</td>
-      <td>${movie.title}</td>
-      <td>${movie.imdb.toFixed(2)}</td>
-      <td>${movie.year}</td>
-    `;
-    tbody.appendChild(tr);
+
+    const td1 = document.createElement("td");
+    td1.textContent = movie.id;
+    tr.append(td1);
+
+    const td2 = document.createElement("td");
+    td2.textContent = movie.title;
+    tr.append(td2);
+
+    const td3 = document.createElement("td");
+    td3.textContent = movie.imdb.toFixed(2);
+    tr.append(td3);
+
+    const td4 = document.createElement("td");
+    td4.textContent = movie.year;
+    tr.append(td4);
+
+    tbody.append(tr);
   });
 }
 
@@ -142,12 +193,11 @@ export function initMemorySorting(table, sortInfoEl) {
   const headers = table.querySelectorAll("thead th");
 
   let data = movies.map((m) => ({ ...m }));
-  let cycleIndex = 0;
 
-  function applySort() {
-    const { field, direction } = sortCycle[cycleIndex];
+  const getSortedData = (field, direction) => {
+    const sorted = data.map((item) => ({ ...item }));
 
-    data.sort((a, b) => {
+    return sorted.sort((a, b) => {
       const valA = a[field];
       const valB = b[field];
 
@@ -155,23 +205,15 @@ export function initMemorySorting(table, sortInfoEl) {
       if (valA > valB) return direction === "asc" ? 1 : -1;
       return 0;
     });
+  };
 
-    renderTableFromMemory(tbody, data);
-
-    headers.forEach((th) => {
-      th.classList.remove("active-asc", "active-desc");
-      if (th.dataset.field === field) {
-        th.classList.add(direction === "asc" ? "active-asc" : "active-desc");
-      }
-    });
-
-    sortInfoEl.textContent = `Сортировка: ${field} ${direction === "asc" ? "↑" : "↓"}`;
-
-    cycleIndex = (cycleIndex + 1) % sortCycle.length;
-  }
-
-  applySort();
-  setInterval(applySort, 2000);
+  return createSortingSystem(
+    tbody,
+    headers,
+    sortInfoEl,
+    getSortedData,
+    renderTableFromMemory,
+  );
 }
 
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
