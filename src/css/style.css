@@ -1,0 +1,84 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  background: #f5f5f5;
+  color: #333;
+}
+
+h1 {
+  font-size: 1.2rem;
+  margin-top: 2rem;
+  color: #444;
+}
+
+/* Task 1: Game Field */
+.game-field {
+  display: grid;
+  grid-template-columns: repeat(4, 80px);
+  grid-template-rows: repeat(4, 80px);
+  gap: 4px;
+  margin-bottom: 20px;
+}
+
+.game-cell {
+  width: 80px;
+  height: 80px;
+  border: 2px solid #aaa;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.goblin {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+
+/* Tasks 2 & 3: Movie tables */
+.sort-info {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.movies-table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 600px;
+  background: #fff;
+  margin-bottom: 20px;
+}
+
+.movies-table th,
+.movies-table td {
+  border: 1px solid #ccc;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.movies-table thead th {
+  background: #e8e8e8;
+  font-weight: bold;
+}
+
+.movies-table thead th.active-asc::after {
+  content: " ↑";
+  color: #007bff;
+}
+
+.movies-table thead th.active-desc::after {
+  content: " ↓";
+  color: #007bff;
+}
+
+.movies-table tbody tr:nth-child(even) {
+  background: #f9f9f9;
+}
